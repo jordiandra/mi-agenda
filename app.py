@@ -1,158 +1,104 @@
 import streamlit as st
-from datetime import datetime, timedelta
+from datetime import datetime
 import pandas as pd
 import os
 
-# --- CONFIGURACIÓN DE NIVEL PROFESIONAL ---
-st.set_page_config(page_title="Personal ERP & Life Planner", layout="wide", page_icon="⚙️")
+# --- CONFIGURACIÓN DE DISEÑO PROFESIONAL ---
+st.set_page_config(page_title="Executive Life Dashboard", layout="wide", page_icon="👔")
 
-# --- GESTIÓN DE DATOS (PERSISTENCIA) ---
-DB_FILE = "sistema_datos.txt"
+# Inyección de CSS para mejorar la estética
+st.markdown("""
+    <style>
+    .main { background-color: #0e1117; color: #ffffff; }
+    .stMetric { background-color: #1f2937; padding: 20px; border-radius: 15px; border: 1px solid #374151; }
+    .stButton>button { width: 100%; border-radius: 10px; height: 3em; background-color: #3b82f6; color: white; border: none; }
+    .stButton>button:hover { background-color: #2563eb; border: none; }
+    div[data-testid="stExpander"] { border-radius: 15px; border: 1px solid #374151; background-color: #1f2937; }
+    </style>
+    """, unsafe_allow_html=True)
 
+# --- SISTEMA DE DATOS ---
+DB_FILE = "sistema_datos_v2.txt"
 def cargar_datos():
-    if not os.path.exists(DB_FILE):
-        return {"puntos": "0", "racha": "0", "ultima_racha": "None"}
+    if not os.path.exists(DB_FILE): return {"puntos": "0", "racha": "0", "ultima_racha": "None"}
     datos = {}
     with open(DB_FILE, "r") as f:
         for linea in f:
-            if ":" in linea:
-                k, v = linea.strip().split(":", 1)
-                datos[k] = v
+            if ":" in linea: k, v = linea.strip().split(":", 1); datos[k] = v
     return datos
 
 def guardar_dato(clave, valor):
-    datos = cargar_datos()
-    datos[clave] = str(valor)
+    datos = cargar_datos(); datos[clave] = str(valor)
     with open(DB_FILE, "w") as f:
-        for k, v in datos.items():
-            f.write(f"{k}:{v}\n")
+        for k, v in datos.items(): f.write(f"{k}:{v}\n")
 
-# --- LÓGICA DE TIEMPO Y CALENDARIO ---
+# --- LÓGICA DE TIEMPO ---
 ahora = datetime.now()
 hoy_str = ahora.strftime("%Y-%m-%d")
 dia_nombre = ahora.strftime('%A')
 hora_decimal = ahora.hour + ahora.minute/60
-dias_es = {
-    "Monday": "Lunes", "Tuesday": "Martes", "Wednesday": "Miércoles",
-    "Thursday": "Jueves", "Friday": "Viernes", "Saturday": "Sábado", "Sunday": "Domingo"
-}
+dias_es = {"Monday": "Lunes", "Tuesday": "Martes", "Wednesday": "Miércoles", "Thursday": "Jueves", "Friday": "Viernes", "Saturday": "Sábado", "Sunday": "Domingo"}
 
-# --- ESTILOS VISUALES ---
-st.markdown("""
-    <style>
-    .stProgress > div > div > div > div { background-image: linear-gradient(to right, #4facfe 0%, #00f2fe 100%); }
-    </style>
-    """, unsafe_allow_html=True)
-
-# --- CABECERA: GAMIFICACIÓN ---
+# --- HEADER: SCOREBOARD ---
 datos = cargar_datos()
-st.title(f"🚀 Dashboard de Alto Rendimiento | {dias_es.get(dia_nombre)}")
+st.title(f"🚀 {dias_es.get(dia_nombre)} | Status del Sistema")
 
 c1, c2, c3 = st.columns(3)
-with c1:
-    st.metric("🔥 Racha Actual", f"{datos.get('racha')} Días")
-with c2:
-    st.metric("🏆 Score Total", f"{datos.get('puntos')} pts")
-with c3:
-    if st.button("✅ REGISTRAR VICTORIA DIARIA"):
-        if datos.get("ultima_racha") != hoy_str:
-            guardar_dato("racha", int(datos.get("racha", 0)) + 1)
-            guardar_dato("puntos", int(datos.get("puntos", 0)) + 100)
-            guardar_dato("ultima_racha", hoy_str)
-            st.balloons()
-            st.rerun()
-        else:
-            st.toast("¡Ya ganaste tus puntos de hoy!")
+with c1: st.metric("🔥 Racha", f"{datos.get('racha')} Días")
+with c2: st.metric("⭐ Nivel", f"{int(datos.get('puntos', 0)) // 1000 + 1}")
+with c3: st.metric("💰 Score", f"{datos.get('puntos')} XP")
+
+if st.button("✨ REGISTRAR VICTORIA DIARIA"):
+    if datos.get("ultima_racha") != hoy_str:
+        guardar_dato("racha", int(datos.get("racha", 0)) + 1)
+        guardar_dato("puntos", int(datos.get("puntos", 0)) + 150)
+        guardar_dato("ultima_racha", hoy_str)
+        st.balloons(); st.rerun()
 
 st.divider()
 
-# --- COLUMNA PRINCIPAL (OPERACIONES) Y LATERAL (ACTIVOS) ---
+# --- CUERPO PRINCIPAL ---
 col_main, col_side = st.columns([2, 1])
 
 with col_main:
-    # 1. MONITOR DE ACTIVIDAD EN TIEMPO REAL
-    st.subheader("🎯 Estado del Sistema (Tiempo Real)")
-    
-    def obtener_bloque():
+    # 1. MONITOR DINÁMICO
+    st.subheader("🎯 Foco Actual")
+    def obtener_status():
         if dia_nombre in ["Saturday", "Sunday"]:
-            if 9 <= hora_decimal < 14: return "📚 UNIVERSIDAD (CARGA ALTA)", "warning"
-            if 14 <= hora_decimal < 19: return "🔓 TIEMPO FLEXIBLE / PROYECTOS", "success"
-            if 19 <= hora_decimal < 21: return "🏋️ GYM / ENTRENAMIENTO", "error"
-            return "🌙 DESCANSO / PLANIFICACIÓN", "info"
+            if 9 <= hora_decimal < 14: return "📚 UNIVERSIDAD (MODO BESTIA)", "#FACC15"
+            if 14 <= hora_decimal < 19: return "🔓 LIBERTAD CREATIVA / PROYECTOS", "#4ADE80"
+            return "🌙 RECARGA DE ENERGÍA", "#60A5FA"
         else:
-            if 6.5 <= hora_decimal < 15: return "💼 TRABAJO PROFESIONAL", "info"
-            if 15 <= hora_decimal < 16.5: return "🇬🇧 INGLÉS + NUTRICIÓN", "success"
-            if 16.5 <= hora_decimal < 18.5: return "🎓 UNIVERSIDAD (ESTUDIO)", "warning"
-            if 19 <= hora_decimal < 21: return "🏋️ GYM / PROGRAMACIÓN", "error"
-            return "😴 MODO REPARACIÓN (SUEÑO)", "info"
+            if 6.5 <= hora_decimal < 15: return "💼 EJECUCIÓN PROFESIONAL", "#3B82F6"
+            if 16.5 <= hora_decimal < 18.5: return "🎓 MEJORA ACADÉMICA", "#F97316"
+            if 19 <= hora_decimal < 21: return "🏋️ POTENCIA FÍSICA", "#EF4444"
+            return "😴 MODO REPARACIÓN", "#94A3B8"
 
-    msg, tipo = obtener_bloque()
-    if tipo == "info": st.info(msg)
-    elif tipo == "success": st.success(msg)
-    elif tipo == "warning": st.warning(msg)
-    elif tipo == "error": st.error(msg)
+    texto, color = obtener_status()
+    st.markdown(f"<h2 style='color:{color}; background-color:rgba(0,0,0,0.2); padding:20px; border-radius:15px; border-left: 10px solid {color};'>{texto}</h2>", unsafe_allow_html=True)
 
-    # 2. BOTÓN DE PÁNICO (SELECTOR DE ENERGÍA)
-    st.divider()
-    st.subheader("🆘 Algoritmo de Decisión (Huecos Libres)")
-    energia = st.select_slider("Nivel de Batería Mental:", options=["Baja", "Media", "Alta", "Máxima"])
-    
-    if st.button("Calcular Tarea Óptima"):
-        dict_tareas = {
-            "Baja": "Revisión de Inversiones (Lectura) o Mantenimiento de Carro.",
-            "Media": "15 min de Inglés y 45 min de Tareas de Universidad.",
-            "Alta": "Bloque de 1 hora de Programación o Tesis.",
-            "Máxima": "Sesión intensiva de Programación (Foco profundo)."
-        }
-        st.write(f"⚙️ **Recomendación:** {dict_tareas[energia]}")
-
-    # 3. MAPA SEMANAL (EXPANDIBLE)
-    with st.expander("📅 Ver Hoja de Ruta Semanal"):
-        df_mapa = pd.DataFrame({
-            "BLOQUE": ["Mañana", "Tarde 1", "Tarde 2", "Noche", "Cierre"],
-            "LUN-VIE": ["Trabajo", "Inglés", "Universidad", "Gym/Prog", "Dormir"],
-            "SÁB-DOM": ["Univ (Alta)", "Inversiones", "Proyectos", "Gym", "Plan"]
-        })
-        st.table(df_mapa)
+    # 2. DECISOR DE ENERGÍA
+    st.markdown("### 🆘 Decision Helper")
+    with st.expander("¿No sabes qué hacer?"):
+        energia = st.select_slider("Energía:", options=["Low", "Medium", "High", "Ultra"])
+        if st.button("Ejecutar Plan"):
+            planes = {"Low": "Inglés (Podcast) + Inversiones.", "Medium": "Mantenimiento o Tarea Uni.", "High": "Programación 1h.", "Ultra": "Tesis o Código Complejo."}
+            st.info(planes[energia])
 
 with col_side:
-    st.subheader("🛠️ Mantenimiento de Activos")
-    # {Tarea: [Frecuencia Días, Criticidad 1-5]}
-    activos = {
-        "Corte de Cabello": [21, 2],
-        "Servicio Carro": [120, 5],
-        "Dentista": [180, 4],
-        "Cita Médica": [365, 3]
-    }
-    
-    for tarea, specs in activos.items():
-        frec, crit = specs
-        ultima_vez = datos.get(f"manto_{tarea}")
-        
-        if ultima_vez and ultima_vez != "None":
-            dt_ultima = datetime.strptime(ultima_vez, "%Y-%m-%d")
-            dias_transcurridos = (ahora - dt_ultima).days
-            uso = min(dias_transcurridos / frec, 1.0)
-            
-            st.write(f"**{tarea}** (Crit: {crit})")
-            st.progress(uso)
-            
-            if uso >= 1.0:
-                st.error("⚠️ CRÍTICO: Realizar hoy")
-            elif uso >= 0.8:
-                st.warning("⏳ Próximo a vencer")
-            
-            c_a, c_b = st.columns(2)
-            with c_a:
-                if st.button("Reset", key=f"re_{tarea}"):
-                    guardar_dato(f"manto_{tarea}", "None")
-                    st.rerun()
+    st.subheader("🛠️ Lifecycle Management")
+    manto = {"Corte Pelo": 21, "Carro": 120, "Dentista": 180}
+    for t, f in manto.items():
+        val = datos.get(f"manto_{t}", "None")
+        if val != "None":
+            dias = (ahora - datetime.strptime(val, "%Y-%m-%d")).days
+            pct = min(dias / f, 1.0)
+            st.write(f"**{t}** ({int(pct*100)}%)")
+            st.progress(pct)
+            if st.button(f"Reset {t}", key=t): guardar_dato(f"manto_{t}", "None"); st.rerun()
         else:
-            st.info(f"Pendiente: {tarea}")
-            if st.button("Marcar Hecho", key=f"do_{tarea}"):
-                guardar_dato(f"manto_{tarea}", hoy_str)
-                st.rerun()
+            if st.button(f"Marcar {t} Hecho"): guardar_dato(f"manto_{t}", hoy_str); st.rerun()
 
-# --- FOOTER: ALERTA DE SALUD ---
-if hora_decimal >= 22 or hora_decimal < 5:
-    st.sidebar.error("🚨 MODO SUEÑO REQUERIDO: Tu rendimiento de mañana depende de tu descanso hoy.")
+# 4. MAPA VISUAL AL FINAL
+with st.expander("📅 Master Schedule"):
+    st.table(pd.DataFrame({"HORA": ["Mañana", "Tarde", "Noche"], "L-V": ["Trabajo", "Uni", "Gym/Prog"], "S-D": ["Uni", "Proyectos", "Gym"]}))
